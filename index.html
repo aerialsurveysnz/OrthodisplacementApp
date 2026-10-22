@@ -842,7 +842,18 @@
         const fmt = (v, d = 2) => Number.isFinite(v) ? v.toLocaleString('en-NZ', { maximumFractionDigits: d, minimumFractionDigits: d }) : '—';
         const row = (label, value) => `<tr><td>${label}</td><td>${value}</td></tr>`;
         const metric = (label, value, unit) => `<div class="card"><small>${label}</small><strong>${value}</strong><em>${unit}</em></div>`;
-        const sel = $('camera'); CAMERAS.forEach((c, i) => { const o = document.createElement('option'); o.value = i; o.textContent = c.name; sel.appendChild(o) }); sel.value = CAMERAS.findIndex(c => c.name === 'UltraCam Eagle Prime 100'); if (sel.value === '-1') sel.value = '0';
+        const sel = $('camera');
+        const currentCameraNames = new Set(['ULtraCam Lp', 'UltraCam Eagle Prime 100', 'PhaseOne iXM-RS150F 50mm']);
+        const currentCameraGroup = document.createElement('optgroup'); currentCameraGroup.label = 'Current cameras';
+        const otherCameraGroup = document.createElement('optgroup'); otherCameraGroup.label = 'Other cameras';
+        CAMERAS.forEach((c, i) => {
+            const o = document.createElement('option'); o.value = i;
+            const isCurrent = currentCameraNames.has(c.name);
+            o.textContent = c.name + (isCurrent ? ' · CURRENT' : '');
+            (isCurrent ? currentCameraGroup : otherCameraGroup).appendChild(o);
+        });
+        sel.append(currentCameraGroup, otherCameraGroup);
+        sel.value = CAMERAS.findIndex(c => c.name === 'UltraCam Eagle Prime 100'); if (sel.value === '-1') sel.value = '0';
         function update() {
             const c = CAMERAS[+sel.value], gsd = +$('gsd').value / 100, f = +$('forward').value / 100, s = +$('side').value / 100, h = +$('terrain').value, knots = +$('speed').value; if (!(gsd > 0 && f >= 0 && f < 1 && s >= 0 && s < 1 && knots > 0)) { $('cards').innerHTML = '<div class="warning">Please enter valid positive GSD and speed, and overlaps from 0 to 99%.</div>'; return; }
             const H = gsd * (c.lens / c.pitch * 1000), feet = H * 3.28084, scale = H * 1000 / c.lens, coverF = scale * c.fw / 1000, coverS = scale * c.sw / 1000, step = coverF * (1 - f), run = coverS * (1 - s), fovF = 2 * Math.atan(coverF / (2 * H)) * 180 / Math.PI, fovS = 2 * Math.atan(coverS / (2 * H)) * 180 / Math.PI;
