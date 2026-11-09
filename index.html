@@ -355,7 +355,7 @@
         }
 
         .ortho-table {
-            min-width: 1080px;
+            min-width: 980px;
             font-variant-numeric: tabular-nums
         }
 
@@ -719,7 +719,7 @@
         }
 
         .aerial-export-table {
-            min-width: 880px;
+            min-width: 1020px;
             font-size: 12px;
             font-variant-numeric: tabular-nums
         }
@@ -984,15 +984,16 @@
                         </div>
                         <section class="aerial-export-recommendations" aria-labelledby="aerial-export-title">
                             <h3 id="aerial-export-title">Export tile recommendations</h3>
-                            <p>Uses the closest GSD in the Ortho Sheet Tile Sizes lookup within ±5 cm of the calculated ground pixel size. Tile options are shown by map scale.</p>
+                            <p>For each requested tile scale, shows the closest GSD with full-pixel width and height in the supplied lookup. The difference is lookup GSD minus calculated GSD; ±1 cm marks a close match.</p>
                             <p class="aerial-export-status" id="aerialExportStatus" aria-live="polite">Enter scan resolution to see matching export tile sizes.</p>
                             <div class="aerial-export-table-scroll" id="aerialExportTableWrap" hidden>
                                 <table class="aerial-export-table" aria-label="Recommended ortho export tile sizes">
                                     <thead>
                                         <tr>
                                             <th scope="col">Map scale</th>
-                                            <th scope="col">Recommended GSD (cm/pixel)</th>
+                                            <th scope="col">Closest lookup GSD (cm)</th>
                                             <th scope="col">Difference (cm)</th>
+                                            <th scope="col">Within ±1 cm?</th>
                                             <th scope="col">Tile size (ground m)</th>
                                             <th scope="col">Export raster (pixels)</th>
                                             <th scope="col">8-bit (MB)</th>
@@ -1011,7 +1012,7 @@
 
         <section class="tool-panel ortho-tile-tool" id="ortho-tiles-tool" role="tabpanel" aria-labelledby="tab-ortho-tiles" hidden>
             <h1>Ortho Sheet Tile Sizes</h1>
-            <p>Enter a target GSD in centimetres per pixel to find A1 tile options within ±5 cm, with ground dimensions, raster dimensions, and estimated image size.</p>
+            <p>Enter a target GSD in centimetres to find tile options within ±1 cm. Only GSD values with complete pixel width and height for that tile scale are included.</p>
 
             <div class="ortho-filter-card">
                 <div class="ortho-filters">
@@ -1022,8 +1023,8 @@
                         </select>
                     </div>
                     <div>
-                        <label for="orthoGsdFilter">Target GSD (cm/pixel)</label>
-                        <input id="orthoGsdFilter" type="number" min="0.01" step="any" inputmode="decimal" placeholder="e.g. 7.5" aria-label="Target ground sample distance in centimetres per pixel">
+                        <label for="orthoGsdFilter">Target GSD (cm)</label>
+                        <input id="orthoGsdFilter" type="number" min="0.01" step="any" inputmode="decimal" placeholder="e.g. 7.5" aria-label="Target ground sample distance in centimetres">
                     </div>
                     <button class="ortho-reset" id="orthoResetFilters" type="button">Reset filters</button>
                 </div>
@@ -1035,21 +1036,20 @@
                     <thead>
                         <tr>
                             <th scope="col">Map scale</th>
-                            <th scope="col">Available GSD (cm/pixel)</th>
+                            <th scope="col">Available GSD (cm)</th>
+                            <th scope="col">GSD (m)</th>
                             <th scope="col">Difference (cm)</th>
                             <th scope="col">Ground width (m)</th>
                             <th scope="col">Ground height (m)</th>
                             <th scope="col">Pixels (width)</th>
-                            <th scope="col">Lines (height)</th>
-                            <th scope="col">Tile size 8-bit (MB)</th>
-                            <th scope="col">Tile size 24-bit (MB)</th>
+                            <th scope="col">Pixels (height)</th>
                         </tr>
                     </thead>
                     <tbody id="orthoTileRows"></tbody>
                 </table>
             </div>
             <p class="ortho-no-results" id="orthoNoResults">No matching tile options. Change or reset the filters to see results.</p>
-            <p class="ortho-caution">A1 paper size · NZTM · MB uses decimal units. Handwritten annotations and overwritten rows are excluded; check the source scan before operational use.</p>
+            <p class="ortho-caution">Only complete pixel width/height pairs from the supplied lookup are searchable. Estimated file sizes use decimal MB.</p>
         </section>
 
         <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -1318,56 +1318,84 @@
   
     </script>
     <script>
-        const ORTHO_TILE_OPTIONS = [
-            ["1:200", 0.03125, 96, 144, 3072, 4608, 14.155776, 42.467328],
-            ["1:500", 0.05, 240, 360, 4800, 7200, 34.56, 103.68],
-            ["1:500", 0.0625, 240, 360, 3840, 5760, 22.1184, 66.3552],
-            ["1:500", 0.075, 240, 360, 3200, 4800, 15.36, 46.08],
-            ["1:500", 0.078125, 240, 360, 3072, 4608, 14.155776, 42.467328],
-            ["1:500", 0.1, 240, 360, 2400, 3600, 8.64, 25.92],
-            ["1:500", 0.125, 240, 360, 1920, 2880, 5.5296, 16.5888],
-            ["1:500", 0.15625, 240, 360, 1536, 2304, 3.538944, 10.616832],
-            ["1:500", 0.2, 240, 360, 1200, 1800, 2.16, 6.48],
-            ["1:500", 0.25, 240, 360, 960, 1440, 1.3824, 4.1472],
-            ["1:1000", 0.1, 480, 720, 4800, 7200, 34.56, 103.68],
-            ["1:1000", 0.125, 480, 720, 3840, 5760, 22.1184, 66.3552],
-            ["1:1000", 0.15, 480, 720, 3200, 4800, 15.36, 46.08],
-            ["1:1000", 0.15625, 480, 720, 3072, 4608, 14.155776, 42.467328],
-            ["1:1000", 0.2, 480, 720, 2400, 3600, 8.64, 25.92],
-            ["1:1000", 0.25, 480, 720, 1920, 2880, 5.5296, 16.5888],
-            ["1:1000", 0.4, 480, 720, 1200, 1800, 2.16, 6.48],
-            ["1:1000", 0.5, 480, 720, 960, 1440, 1.3824, 4.1472],
-            ["1:1500", 0.15, 720, 1080, 4800, 7200, 34.56, 103.68],
-            ["1:1500", 0.1875, 720, 1080, 3840, 5760, 22.1184, 66.3552],
-            ["1:1500", 0.234375, 720, 1080, 3072, 4608, 14.155776, 42.467328],
-            ["1:1500", 0.3, 720, 1080, 2400, 3600, 8.64, 25.92],
-            ["1:1500", 0.375, 720, 1080, 1920, 2880, 5.5296, 16.5888],
-            ["1:1500", 0.6, 720, 1080, 1200, 1800, 2.16, 6.48],
-            ["1:1500", 0.75, 720, 1080, 960, 1440, 1.3824, 4.1472],
-            ["1:2000", 0.2, 960, 1440, 4800, 7200, 34.56, 103.68],
-            ["1:2000", 0.25, 960, 1440, 3840, 5760, 22.1184, 66.3552],
-            ["1:2000", 0.3125, 960, 1440, 3072, 4608, 14.155776, 42.467328],
-            ["1:2000", 0.4, 960, 1440, 2400, 3600, 8.64, 25.92],
-            ["1:2000", 0.5, 960, 1440, 1920, 2880, 5.5296, 16.5888],
-            ["1:2000", 0.8, 960, 1440, 1200, 1800, 2.16, 6.48],
-            ["1:2000", 1, 960, 1440, 960, 1440, 1.3824, 4.1472],
-            ["1:2500", 0.25, 1200, 1800, 4800, 7200, 34.56, 103.68],
-            ["1:2500", 0.3125, 1200, 1800, 3840, 5760, 22.1184, 66.3552],
-            ["1:2500", 0.390625, 1200, 1800, 3072, 4608, 14.155776, 42.467328],
-            ["1:2500", 0.5, 1200, 1800, 2400, 3600, 8.64, 25.92],
-            ["1:2500", 0.625, 1200, 1800, 1920, 2880, 5.5296, 16.5888],
-            ["1:2500", 1, 1200, 1800, 1200, 1800, 2.16, 6.48],
-            ["1:2500", 1.25, 1200, 1800, 960, 1440, 1.3824, 4.1472],
-            ["1:5000", 0.4, 2400, 3600, 6000, 9000, 54, 162],
-            ["1:5000", 0.5, 2400, 3600, 4800, 7200, 34.56, 103.68],
-            ["1:5000", 0.625, 2400, 3600, 3840, 5760, 22.1184, 66.3552],
-            ["1:5000", 0.78125, 2400, 3600, 3072, 4608, 14.155776, 42.467328],
-            ["1:5000", 1, 2400, 3600, 2400, 3600, 8.64, 25.92],
-            ["1:5000", 1.25, 2400, 3600, 1920, 2880, 5.5296, 16.5888],
-            ["1:5000", 2, 2400, 3600, 1200, 1800, 2.16, 6.48],
-            ["1:5000", 2.5, 2400, 3600, 960, 1440, 1.3824, 4.1472]
+
+        const ORTHO_TILE_SCALES = [
+            { scale: '1:500', widthIndex: 2, heightIndex: 3 },
+            { scale: '1:1000', widthIndex: 4, heightIndex: 5 },
+            { scale: '1:2000', widthIndex: 6, heightIndex: 7 },
+            { scale: '1:5000', widthIndex: 8, heightIndex: 9 }
+        ];
+        const ORTHO_GSD_TOLERANCE_CM = 1;
+        // Rows are [GSD cm, GSD m, then pixel-width/pixel-height pairs by map scale].
+        // Blank pairs are excluded because they do not provide a full-pixel tile grid.
+        const ORTHO_GSD_REFERENCE = [
+            [1,0.01,24000,36000,48000,72000,96000,144000,240000,360000],
+            [1.2,0.012,20000,30000,40000,60000,80000,120000,200000,300000],
+            [1.25,0.0125,19200,28800,38400,57600,76800,115200,192000,288000],
+            [1.5,0.015,16000,24000,32000,48000,64000,96000,160000,240000],
+            [1.6,0.016,15000,22500,30000,45000,60000,90000,150000,225000],
+            [2,0.02,12000,18000,24000,36000,48000,72000,120000,180000],
+            [2.4,0.024,10000,15000,20000,30000,40000,60000,100000,150000],
+            [2.5,0.025,9600,14400,19200,28800,38400,57600,96000,144000],
+            [3,0.03,8000,12000,16000,24000,32000,48000,80000,120000],
+            [3.2,0.032,7500,11250,15000,22500,30000,45000,75000,112500],
+            [3.75,0.0375,6400,9600,12800,19200,25600,38400,64000,96000],
+            [4,0.04,6000,9000,12000,18000,24000,36000,60000,90000],
+            [4.8,0.048,5000,7500,10000,15000,20000,30000,50000,75000],
+            [5,0.05,4800,7200,9600,14400,19200,28800,48000,72000],
+            [6,0.06,4000,6000,8000,12000,16000,24000,40000,60000],
+            [6.25,0.0625,3840,5760,7680,11520,15360,23040,38400,57600],
+            [6.4,0.064,3750,5625,7500,11250,15000,22500,37500,56250],
+            [7.5,0.075,3200,4800,6400,9600,12800,19200,32000,48000],
+            [8,0.08,3000,4500,6000,9000,12000,18000,30000,45000],
+            [9.6,0.096,2500,3750,5000,7500,10000,15000,25000,37500],
+            [10,0.1,2400,3600,4800,7200,9600,14400,24000,36000],
+            [12,0.12,2000,3000,4000,6000,8000,12000,20000,30000],
+            [12.5,0.125,1920,2880,3840,5760,7680,11520,19200,28800],
+            [12.8,0.128,null,null,3750,5625,7500,11250,18750,28125],
+            [15,0.15,1600,2400,3200,4800,6400,9600,16000,24000],
+            [16,0.16,1500,2250,3000,4500,6000,9000,15000,22500],
+            [18.75,0.1875,1280,1920,2560,3840,5120,7680,12800,19200],
+            [19.2,0.192,1250,1875,2500,3750,5000,7500,12500,18750],
+            [20,0.2,1200,1800,2400,3600,4800,7200,12000,18000],
+            [24,0.24,1000,1500,2000,3000,4000,6000,10000,15000],
+            [25,0.25,960,1440,1920,2880,3840,5760,9600,14400],
+            [25.6,0.256,null,null,null,null,3750,5625,null,null],
+            [30,0.3,800,1200,1600,2400,3200,4800,8000,12000],
+            [31.25,0.3125,768,1152,1536,2304,3072,4608,7680,11520],
+            [32,0.32,750,1125,1500,2250,3000,4500,7500,11250],
+            [37.5,0.375,640,960,1280,1920,2560,3840,6400,9600],
+            [38.4,0.384,625,938,1250,1875,2500,3750,6250,9375],
+            [40,0.4,600,900,1200,1800,2400,3600,6000,9000],
+            [48,0.48,500,750,1000,1500,2000,3000,5000,7500],
+            [50,0.5,480,720,960,1440,1920,2880,4800,7200],
+            [60,0.6,400,600,800,1200,1600,2400,4000,6000],
+            [62.5,0.625,384,576,768,1152,1536,2304,3840,5760],
+            [64,0.64,null,null,750,1125,1500,2250,3750,5625],
+            [75,0.75,320,480,640,960,1280,1920,3200,4800],
+            [76.8,0.768,null,null,null,null,1250,1875,null,null],
+            [80,0.8,300,450,600,900,1200,1800,3000,4500],
+            [93.75,0.9375,256,384,512,768,1024,1536,2560,3840],
+            [96,0.96,250,375,500,750,1000,1500,2500,3750],
+            [100,1,240,360,480,720,960,1440,2400,3600]
         ];
 
+        const ORTHO_TILE_OPTIONS = [];
+        ORTHO_GSD_REFERENCE.forEach((reference) => {
+            const [gsdCm, gsdMeters] = reference;
+            ORTHO_TILE_SCALES.forEach(({ scale, widthIndex, heightIndex }) => {
+                const pixelsWide = reference[widthIndex];
+                const pixelsHigh = reference[heightIndex];
+                if (!Number.isInteger(pixelsWide) || !Number.isInteger(pixelsHigh)) return;
+                const groundWidth = Math.round(gsdMeters * pixelsWide);
+                const groundHeight = Math.round(gsdMeters * pixelsHigh);
+                const pixels = pixelsWide * pixelsHigh;
+                ORTHO_TILE_OPTIONS.push([
+                    scale, gsdCm, gsdMeters, groundWidth, groundHeight,
+                    pixelsWide, pixelsHigh, pixels / 1000000, pixels * 3 / 1000000
+                ]);
+            });
+        });
         window.updateAerialExportRecommendations = function (targetGsdCm) {
             const status = document.getElementById('aerialExportStatus');
             const tableWrap = document.getElementById('aerialExportTableWrap');
@@ -1387,35 +1415,37 @@
                 return;
             }
 
-            const closestDifference = Math.min(...ORTHO_TILE_OPTIONS.map((item) => Math.abs(item[1] * 100 - targetGsdCm)));
-            const closestRows = ORTHO_TILE_OPTIONS.filter((item) =>
-                Math.abs(Math.abs(item[1] * 100 - targetGsdCm) - closestDifference) < 0.0000001);
-            if (closestDifference > 5) {
-                const closestGsdCm = closestRows[0][1] * 100;
-                status.textContent = 'No lookup option is within ±5 cm of the calculated ' +
-                    formatGsdCm.format(targetGsdCm) + ' cm/pixel. Closest reference: ' +
-                    formatGsdCm.format(closestGsdCm) + ' cm/pixel (' +
-                    signedDifference(closestGsdCm - targetGsdCm) + ' cm).';
+            const requestedScales = ['1:500', '1:1000', '1:2000', '1:5000'];
+            const recommendations = requestedScales.flatMap((scale) => {
+                const options = ORTHO_TILE_OPTIONS.filter((item) => item[0] === scale);
+                if (!options.length) return [];
+                options.sort((left, right) => {
+                    const leftDifference = Math.abs(left[1] - targetGsdCm);
+                    const rightDifference = Math.abs(right[1] - targetGsdCm);
+                    return leftDifference - rightDifference || left[1] - right[1];
+                });
+                return [options[0]];
+            });
+            if (!recommendations.length) {
+                status.textContent = 'The lookup has no entries for the requested tile scales.';
                 return;
             }
 
-            const scaleOrder = (left, right) => Number(left[0].split(':')[1]) - Number(right[0].split(':')[1]);
-            closestRows.sort((left, right) => scaleOrder(left, right) || left[1] - right[1]);
-            const closestGsds = Array.from(new Set(closestRows.map((item) => formatGsdCm.format(item[1] * 100))));
             status.textContent = 'Calculated GSD: ' + formatGsdCm.format(targetGsdCm) +
-                ' cm/pixel. Closest lookup GSD: ' + closestGsds.join(' / ') +
-                ' cm/pixel. Showing tile sizes available at each matching map scale.';
+                ' cm. Closest full-pixel-fit option for each tile scale is shown; “Within ±1 cm” marks close matches.';
 
-            rowsBody.replaceChildren(...closestRows.map((item) => {
+            rowsBody.replaceChildren(...recommendations.map((item) => {
                 const row = document.createElement('tr');
+                const differenceCm = item[1] - targetGsdCm;
                 const values = [
                     item[0],
-                    formatGsdCm.format(item[1] * 100),
-                    signedDifference(item[1] * 100 - targetGsdCm),
-                    formatInteger.format(item[2]) + ' × ' + formatInteger.format(item[3]),
-                    formatInteger.format(item[4]) + ' × ' + formatInteger.format(item[5]),
-                    formatMb.format(item[6]),
-                    formatMb.format(item[7])
+                    formatGsdCm.format(item[1]),
+                    signedDifference(differenceCm),
+                    Math.abs(differenceCm) <= ORTHO_GSD_TOLERANCE_CM ? 'Yes' : 'Outside ±1 cm',
+                    formatInteger.format(item[3]) + ' × ' + formatInteger.format(item[4]),
+                    formatInteger.format(item[5]) + ' × ' + formatInteger.format(item[6]),
+                    formatMb.format(item[7]),
+                    formatMb.format(item[8])
                 ];
                 values.forEach((value) => {
                     const cell = document.createElement('td');
@@ -1436,8 +1466,8 @@
             const noResults = document.getElementById('orthoNoResults');
             const formatInteger = new Intl.NumberFormat('en-NZ', { maximumFractionDigits: 0 });
             const formatGsdCm = new Intl.NumberFormat('en-NZ', { maximumFractionDigits: 4 });
+            const formatGsdM = new Intl.NumberFormat('en-NZ', { maximumFractionDigits: 6 });
             const formatDifferenceCm = new Intl.NumberFormat('en-NZ', { maximumFractionDigits: 2 });
-            const formatMb = new Intl.NumberFormat('en-NZ', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
             const scales = Array.from(new Set(ORTHO_TILE_OPTIONS.map((item) => item[0])))
                 .sort((left, right) => Number(left.split(':')[1]) - Number(right.split(':')[1]));
             scales.forEach((scale) => {
@@ -1454,19 +1484,18 @@
                 const hasTarget = targetGsdCm !== null && Number.isFinite(targetGsdCm);
                 const matches = ORTHO_TILE_OPTIONS.filter((item) =>
                     (!scale || item[0] === scale) &&
-                    (!hasTarget || Math.abs(item[1] * 100 - targetGsdCm) <= 5));
+                    (!hasTarget || Math.abs(item[1] - targetGsdCm) <= ORTHO_GSD_TOLERANCE_CM));
                 rowsBody.replaceChildren(...matches.map((item) => {
                     const row = document.createElement('tr');
-                    const availableGsdCm = item[1] * 100;
+                    const availableGsdCm = item[1];
                     const differenceCm = hasTarget ? availableGsdCm - targetGsdCm : null;
                     const formattedDifference = differenceCm === null ? '—' :
                         Math.abs(differenceCm) < 0.0000001 ? '0' :
                         (differenceCm > 0 ? '+' : '−') + formatDifferenceCm.format(Math.abs(differenceCm));
                     const values = [
-                        item[0], formatGsdCm.format(availableGsdCm), formattedDifference,
-                        formatInteger.format(item[2]), formatInteger.format(item[3]),
-                        formatInteger.format(item[4]), formatInteger.format(item[5]),
-                        formatMb.format(item[6]), formatMb.format(item[7])
+                        item[0], formatGsdCm.format(availableGsdCm), formatGsdM.format(item[2]), formattedDifference,
+                        formatInteger.format(item[3]), formatInteger.format(item[4]),
+                        formatInteger.format(item[5]), formatInteger.format(item[6])
                     ];
                     values.forEach((value) => {
                         const cell = document.createElement('td');
@@ -1477,13 +1506,13 @@
                 }));
                 resultCount.textContent = hasTarget
                     ? 'Showing ' + formatInteger.format(matches.length) + ' of ' +
-                        formatInteger.format(ORTHO_TILE_OPTIONS.length) + ' tile options within ±5 cm of ' +
-                        formatGsdCm.format(targetGsdCm) + ' cm/pixel'
+                        formatInteger.format(ORTHO_TILE_OPTIONS.length) + ' full-pixel-fit tile options within ±1 cm of ' +
+                        formatGsdCm.format(targetGsdCm) + ' cm'
                     : 'Showing ' + formatInteger.format(matches.length) + ' of ' +
-                        formatInteger.format(ORTHO_TILE_OPTIONS.length) + ' tile options. Enter a GSD to show options within ±5 cm.';
+                        formatInteger.format(ORTHO_TILE_OPTIONS.length) + ' full-pixel-fit tile options. Enter a GSD to show options within ±1 cm.';
                 noResults.textContent = hasTarget
-                    ? 'No tile options fall within ±5 cm of this GSD. Change the GSD or map scale, or reset the filters.'
-                    : 'No tile options match this map scale. Change the map scale or reset the filters.';
+                    ? 'No full-pixel-fit tile options fall within ±1 cm of this GSD and map scale. Change the filters or reset them.'
+                    : 'No full-pixel-fit tile options match this map scale. Change the map scale or reset the filters.';
                 noResults.style.display = matches.length ? 'none' : 'block';
             }
 
